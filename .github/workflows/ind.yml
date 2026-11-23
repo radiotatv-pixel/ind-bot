@@ -1,0 +1,33 @@
+name: IND Utrecht check
+
+# Запускає cron-job.org кожні 10 хвилин, кожен запуск перевіряє сайт ~9 хвилин
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ind-bot
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Перевірити IND
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python ind_bot.py
+      - name: Зберегти, що вже надіслано
+        run: |
+          git config user.name "ind-bot"
+          git config user.email "ind-bot@users.noreply.github.com"
+          git add ind_state.json 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "update state" && git pull --rebase && git push)
